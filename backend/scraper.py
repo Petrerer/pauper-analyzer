@@ -11,7 +11,7 @@ import time
 import requests
 from bs4 import BeautifulSoup
 
-URL = "https://mtgdecks.net/Pauper/winrates/range:last30days"
+URL = "https://mtgdecks.net/Pauper/winrates"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

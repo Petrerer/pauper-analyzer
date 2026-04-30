@@ -106,7 +106,7 @@ export default function Results({ results, decks, onBack }) {
 
       <div className="results-matchups">
         <h3>Szczegóły matchupów</h3>
-        {results.results.slice(0, 5).map((row) => (
+        {results.potential_picks.slice(0, 30).map((row) => (
           <MatchupCard key={row.deck} row={row} decks={decks} deckMap={deckMap} nRounds={results.n_rounds} />
         ))}
       </div>

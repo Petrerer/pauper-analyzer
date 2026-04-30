@@ -25,6 +25,7 @@ export default function DeckPicker({ decks, onAdd, meta }) {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+      {/* Usunięto overflow inline, teraz grid dostosuje się do zawartości */}
       <div className="deck-grid">
         {filtered.map((deck) => {
           const count = metaCounts[deck.name] || 0;
@@ -41,7 +42,10 @@ export default function DeckPicker({ decks, onAdd, meta }) {
                     src={`${API}${deck.image}`}
                     alt={deck.name}
                     className="deck-img"
-                    onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                    onError={(e) => { 
+                      e.target.style.display = "none"; 
+                      if (e.target.nextSibling) e.target.nextSibling.style.display = "flex"; 
+                    }}
                   />
                 ) : null}
                 <div className="deck-img-placeholder" style={{ display: deck.image ? "none" : "flex" }}>

@@ -1,16 +1,19 @@
 """
 Tournament analysis logic ported from pauper_winrates.ipynb
+Fixed to provide clear tournament breakdown and best deck recommendations.
 """
-
 
 def get_matchup_wr(deck: str, opponent: str, winrates: dict) -> float:
     if deck == opponent:
         return 0.5
+    # Pobieramy winrate z bazy, domyślnie 0.5 jeśli brak danych
     return winrates.get(deck, {}).get("vs", {}).get(opponent, {}).get("winrate", 0.5)
 
 
 def build_meta_share(deck_list: list[str]) -> dict:
-    """Build meta share from a list of decks (each occurrence = 1 copy in tournament)."""
+    """Buduje udział procentowy talii w turnieju."""
+    if not deck_list:
+        return {}
     meta_share: dict[str, float] = {}
     for deck in deck_list:
         meta_share[deck] = meta_share.get(deck, 0) + 1
@@ -18,112 +21,101 @@ def build_meta_share(deck_list: list[str]) -> dict:
     return {d: meta_share[d] / total for d in meta_share}
 
 
-def get_general_winrates(decks: list[str], meta_share: dict, winrates: dict) -> dict:
-    return {
-        d: sum(
-            get_matchup_wr(d, opp, winrates) * meta_share.get(opp, 0)
-            for opp in decks
-        )
-        for d in decks
-    }
+def get_expected_performance(deck: str, meta_share: dict, winrates: dict) -> float:
+    """Oblicza średni winrate konkretnego decku przeciwko całej metagame."""
+    return sum(
+        get_matchup_wr(deck, opp, winrates) * share 
+        for opp, share in meta_share.items()
+    )
 
 
-def probabilistic_tournament(decks: list[str], meta_share: dict, winrates: dict, n_rounds: int = 5) -> dict:
-    decks_performance = {(0, 0): {d: meta_share.get(d, 0) for d in decks}}
+def calculate_bracket_probs(deck: str, meta_share: dict, winrates: dict, n_rounds: int) -> dict:
+    """
+    Oblicza prawdopodobieństwa konkretnych wyników (np. 5-0, 4-1) dla wybranego decku.
+    Używamy programowania dynamicznego (DP).
+    """
+    # dp[(runda, wygrane)] = prawdopodobieństwo
+    dp = {(0, 0): 1.0}
+    
+    # Średni winrate w jednej rundzie przeciwko "polu" (field)
+    avg_winrate = get_expected_performance(deck, meta_share, winrates)
 
-    for _ in range(n_rounds):
-        new_decks_performance: dict = {}
+    for r in range(n_rounds):
+        new_dp = {}
+        for (round_num, wins), prob in dp.items():
+            # Wygrana w tej rundzie
+            new_dp[(round_num + 1, wins + 1)] = new_dp.get((round_num + 1, wins + 1), 0) + prob * avg_winrate
+            # Przegrana w tej rundzie
+            new_dp[(round_num + 1, wins)] = new_dp.get((round_num + 1, wins), 0) + prob * (1 - avg_winrate)
+        dp = new_dp
 
-        for result, dist in decks_performance.items():
-            wins, losses = result
-            win_key = (wins + 1, losses)
-            loss_key = (wins, losses + 1)
-
-            if win_key not in new_decks_performance:
-                new_decks_performance[win_key] = {d: 0.0 for d in decks}
-            if loss_key not in new_decks_performance:
-                new_decks_performance[loss_key] = {d: 0.0 for d in decks}
-
-            total = sum(dist.values())
-            field = {d: dist[d] / total for d in decks} if total > 0 else {d: 0.0 for d in decks}
-
-            for deck in decks:
-                for opp in decks:
-                    matchup_wr = get_matchup_wr(deck, opp, winrates)
-                    weight = dist[deck] * field[opp]
-                    new_decks_performance[win_key][deck] += weight * matchup_wr
-                    new_decks_performance[loss_key][deck] += weight * (1 - matchup_wr)
-
-        decks_performance = new_decks_performance
-
-    return decks_performance
+    results = {}
+    for (r, w), prob in dp.items():
+        losses = n_rounds - w
+        results[f"{w}W-{losses}L"] = {
+            "probability": round(prob, 6),
+            "field_pct": 0.0 # To pole zostanie wypełnione tylko w analizie turnieju
+        }
+    return results
 
 
 def run_tournament_analysis(winrates: dict, deck_list: list[str], n_rounds: int = 5) -> dict:
-    # Get unique decks that exist in winrates
+    # 1. Przygotowanie danych
     known_decks = list(winrates.keys())
+    #only decks with more than 0.005 meta
+    popular_decks = [d for d in winrates.keys() if winrates[d].get("overall", {}).get("matches", 0) > 0 and (winrates[d]["overall"]["matches"] / sum(wr.get("overall", {}).get("matches", 0) for wr in winrates.values())) >= 0.005]
     valid_decks = [d for d in deck_list if d in known_decks]
-
     meta_share = build_meta_share(valid_decks)
-    unique_decks = list(meta_share.keys())
+    unique_decks_in_tourney = list(meta_share.keys())
 
-    general_wr = get_general_winrates(unique_decks, meta_share, winrates)
-    outcomes = probabilistic_tournament(unique_decks, meta_share, winrates, n_rounds)
-
-    # Compute E[wins] for each deck
-    def expected_wr(deck: str) -> float:
-        total_mass = 0.0
-        weighted_wins = 0.0
-        for (wins, losses), dist in outcomes.items():
-            mass = dist.get(deck, 0)
-            weighted_wins += wins * mass
-            total_mass += mass
-        if total_mass == 0:
-            return 0.5
-        return (weighted_wins / total_mass) / n_rounds
-
-    # Build top-N probability (probability of going X-0 or similar good records)
-    def bracket_probs(deck: str) -> dict:
-        result = {}
-        for (wins, losses), dist in outcomes.items():
-            total = sum(dist.values())
-            prob = dist.get(deck, 0)
-            field_pct = prob / total if total > 0 else 0
-            result[f"{wins}W-{losses}L"] = {
-                "probability": round(prob, 6),
-                "field_pct": round(field_pct, 6),
-            }
-        return result
-
+    # 2. Analiza obecnego turnieju (Results)
     rows = []
-    for deck in unique_decks:
-        share = meta_share.get(deck, 0)
-        exp_wr = expected_wr(deck)
-        gen_wr = general_wr.get(deck, 0.5)
-        delta = exp_wr / share if share > 0 else 0
-
-        # P(5-0) specifically for the "best" outcome
-        best_outcome = outcomes.get((n_rounds, 0), {})
-        p_undefeated = best_outcome.get(deck, 0)
-        total_mass = sum(best_outcome.values())
-        field_undefeated = p_undefeated / total_mass if total_mass > 0 else 0
+    for deck in unique_decks_in_tourney:
+        exp_wr = get_expected_performance(deck, meta_share, winrates)
+        brackets = calculate_bracket_probs(deck, meta_share, winrates, n_rounds)
+        p_undefeated = brackets.get(f"{n_rounds}W-0L", {}).get("probability", 0)
+        
+        # Delta: jak bardzo deck overperformuje względem swojej popularności w kontekście 5-0
+        # (W uproszczeniu: szansa na 5-0 / średnia szansa w turnieju)
+        delta = p_undefeated / (0.5 ** n_rounds) if (0.5 ** n_rounds) > 0 else 0
 
         rows.append({
             "deck": deck,
-            "meta_share": round(share, 4),
-            "winrate_vs_meta": round(gen_wr, 4),
+            "meta_share": round(meta_share[deck], 4),
+            "winrate_vs_meta": round(exp_wr, 4),
             "expected_winrate": round(exp_wr, 4),
-            "delta": round(delta, 4),
+            "delta": round(delta, 2),
             "p_undefeated": round(p_undefeated, 6),
-            "field_pct_undefeated": round(field_undefeated, 6),
-            "bracket_probs": bracket_probs(deck),
+            "bracket_probs": brackets
         })
 
-    rows.sort(key=lambda x: x["expected_winrate"], reverse=True)
+    # Sortujemy wyniki turnieju od najlepszego expected winrate
+    rows = sorted(rows, key=lambda x: x["expected_winrate"], reverse=True)
+
+    # 3. Rekomendacje: Co najlepiej wziąć na ten turniej? (Potential Picks)
+    potential_picks_rows = []
+    for deck_name in popular_decks:
+        # Symulujemy wejście TYM deckiem w podaną metę
+        exp_wr = get_expected_performance(deck_name, meta_share, winrates)
+        brackets = calculate_bracket_probs(deck_name, meta_share, winrates, n_rounds)
+        p_undefeated = brackets.get(f"{n_rounds}W-0L", {}).get("probability", 0)
+        
+        potential_picks_rows.append({
+            "deck": deck_name,
+            "expected_winrate": round(exp_wr, 4),
+            "p_undefeated": round(p_undefeated, 6),
+            "delta": round(p_undefeated / (0.5**n_rounds), 2),
+            "bracket_probs": brackets,
+            "meta_share": meta_share.get(deck_name, 0) # Informacyjnie: ile tego już jest
+        })
+
+    # Sortujemy rekomendacje po szansie na niepokonany wynik (X-0)
+    potential_picks_rows = sorted(potential_picks_rows, key=lambda x: x["p_undefeated"], reverse=True)
 
     return {
         "n_rounds": n_rounds,
         "n_decks": len(deck_list),
-        "unique_decks": len(unique_decks),
+        "unique_decks": len(unique_decks_in_tourney),
         "results": rows,
+        "potential_picks": potential_picks_rows,
     }

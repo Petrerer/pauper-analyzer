@@ -87,8 +87,8 @@ def get_decks():
         })
     result.sort(key=lambda x: x["matches"], reverse=True)
 
-    temp_cutoff = 0.005
-    result = [d for d in result if d["meta_share"] >= temp_cutoff]
+    # temp_cutoff = 0.005
+    # result = [d for d in result if d["meta_share"] >= temp_cutoff]
     return result
 
 
