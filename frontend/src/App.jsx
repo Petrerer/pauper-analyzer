@@ -4,7 +4,8 @@ import MetaBuilder from "./components/MetaBuilder";
 import Results from "./components/Results";
 import "./App.css";
 
-const API = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 
 export default function App() {
   const [decks, setDecks] = useState([]);

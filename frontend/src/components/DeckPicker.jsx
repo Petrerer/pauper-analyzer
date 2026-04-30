@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 
-const API = "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 
 export default function DeckPicker({ decks, onAdd, meta }) {
   const [search, setSearch] = useState("");
