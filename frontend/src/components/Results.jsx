@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 
-const API = "http://localhost:8000";
+// Poprawka: Usuwamy ewentualny ukośnik na końcu adresu z env, żeby uniknąć podwójnych "//"
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = API_BASE.endsWith('/') ? API_BASE.slice(0, -1) : API_BASE;
 
 function WinBar({ value, max = 1 }) {
   const pct = Math.min((value / max) * 100, 100);
@@ -25,13 +27,17 @@ function DeltaBadge({ delta }) {
 export default function Results({ results, decks, onBack }) {
   const deckMap = useMemo(() => {
     const m = {};
+    if (!decks) return m; // Guard na wypadek pustych danych
     for (const d of decks) m[d.name] = d;
     return m;
   }, [decks]);
 
   const maxWR = useMemo(() => {
+    if (!results?.results?.length) return 1;
     return Math.max(...results.results.map((r) => r.expected_winrate));
   }, [results]);
+
+  if (!results || !results.results) return <div>Ładowanie wyników...</div>;
 
   return (
     <div className="results">
@@ -71,6 +77,9 @@ export default function Results({ results, decks, onBack }) {
           <tbody>
             {results.results.map((row, i) => {
               const deck = deckMap[row.deck];
+              // Poprawka ścieżki obrazka: upewniamy się, że zaczyna się od /
+              const imagePath = deck?.image?.startsWith('/') ? deck.image : `/${deck?.image}`;
+              
               return (
                 <tr key={row.deck} className={i === 0 ? "row-first" : ""}>
                   <td className="rank-cell">
@@ -78,7 +87,7 @@ export default function Results({ results, decks, onBack }) {
                   </td>
                   <td className="deck-cell">
                     {deck?.image && (
-                      <img src={`${API}${deck.image}`} alt={row.deck} className="result-thumb" />
+                      <img src={`${API}${imagePath}`} alt={row.deck} className="result-thumb" />
                     )}
                     <span>{row.deck}</span>
                   </td>
@@ -106,8 +115,8 @@ export default function Results({ results, decks, onBack }) {
 
       <div className="results-matchups">
         <h3>Szczegóły matchupów</h3>
-        {results.potential_picks.slice(0, 30).map((row) => (
-          <MatchupCard key={row.deck} row={row} decks={decks} deckMap={deckMap} nRounds={results.n_rounds} />
+        {results.results.slice(0, 30).map((row) => (
+          <MatchupCard key={`matchup-${row.deck}`} row={row} deckMap={deckMap} nRounds={results.n_rounds} />
         ))}
       </div>
     </div>
@@ -116,6 +125,7 @@ export default function Results({ results, decks, onBack }) {
 
 function MatchupCard({ row, deckMap, nRounds }) {
   const deck = deckMap[row.deck];
+  const imagePath = deck?.image?.startsWith('/') ? deck.image : `/${deck?.image}`;
   const probs = row.bracket_probs || {};
   const records = Object.entries(probs).sort((a, b) => {
     const [aw] = a[0].split("W");
@@ -126,7 +136,7 @@ function MatchupCard({ row, deckMap, nRounds }) {
   return (
     <div className="matchup-card">
       <div className="matchup-card-header">
-        {deck?.image && <img src={API + `${deck.image}`} alt={row.deck} className="matchup-thumb" />}
+        {deck?.image && <img src={`${API}${imagePath}`} alt={row.deck} className="matchup-thumb" />}
         <div>
           <div className="matchup-deck-name">{row.deck}</div>
           <div className="matchup-sub">
