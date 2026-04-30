@@ -11,7 +11,7 @@ app = FastAPI(title="Pauper Meta Analyzer")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://pauper-analyzer.vercel.app/","http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["https://pauper-analyzer-e257sr484-petrerers-projects.vercel.app","https://pauper-analyzer.vercel.app","http://localhost:5173", "http://localhost:3000"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
