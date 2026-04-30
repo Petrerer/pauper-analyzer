@@ -126,7 +126,7 @@ function MatchupCard({ row, deckMap, nRounds }) {
   return (
     <div className="matchup-card">
       <div className="matchup-card-header">
-        {deck?.image && <img src={`http://localhost:8000${deck.image}`} alt={row.deck} className="matchup-thumb" />}
+        {deck?.image && <img src={API + `${deck.image}`} alt={row.deck} className="matchup-thumb" />}
         <div>
           <div className="matchup-deck-name">{row.deck}</div>
           <div className="matchup-sub">
