@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import DeckPicker from "./components/DeckPicker";
 import MetaBuilder from "./components/MetaBuilder";
 import Results from "./components/Results";
+import About from "./components/About";
 import "./App.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -80,12 +81,15 @@ export default function App() {
                 Results
               </button>
             )}
+            <button className={`nav-btn ${view === "about" ? "active" : ""}`} onClick={() => setView("about")}>
+              About
+            </button>
           </nav>
         </div>
       </header>
 
       <main className="main">
-        {hasData === false && (
+        {hasData === false && view !== "about" && (
           <div className="notice">
             <span>⚠</span>
             <div>
@@ -127,6 +131,8 @@ export default function App() {
         {view === "results" && results && (
           <Results results={results} decks={decks} onBack={() => setView("builder")} />
         )}
+
+        {view === "about" && <About />}
       </main>
     </div>
   );

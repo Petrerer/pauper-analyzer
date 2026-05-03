@@ -2,18 +2,6 @@
 
 Aplikacja webowa do analizy meta-gry w formacie Pauper (Magic: The Gathering).
 
-## Struktura
-
-```
-pauper-analyzer/
-├── backend/
-│   ├── main.py          # FastAPI server
-│   ├── analysis.py      # Logika turnieju (z notebooków)
-│   ├── scraper.py       # Scraper winrates + obrazków
-│   ├── requirements.txt
-│   └── data/            # Generowane: winrates.json, decks.json, images/
-└── frontend/            # React + Vite
-```
 
 ## Uruchomienie
 
@@ -23,10 +11,8 @@ pauper-analyzer/
 cd backend
 pip install -r requirements.txt
 
-# Pobierz dane (raz, lub gdy chcesz odświeżyć)
 python scraper.py
 
-# Uruchom serwer
 uvicorn main:app --reload --port 8000
 ```
 
@@ -57,11 +43,4 @@ Aplikacja będzie dostępna pod: http://localhost:5173
 
 ## Odświeżanie danych
 
-Dane są ważne ~30 dni (zakres scrapera: `last30days`). Żeby odświeżyć:
-
-```bash
-cd backend
-python scraper.py
-```
-
-Skrypt pomija obrazki już pobrane, więc nie ściąga ich ponownie.
+Dane są pobierane manualnie

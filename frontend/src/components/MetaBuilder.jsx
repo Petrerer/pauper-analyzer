@@ -83,9 +83,9 @@ export default function MetaBuilder({ meta, decks, onRemove, onClear, nRounds, o
 
       <div className="meta-controls">
         <div className="rounds-control">
-          <label>Rundy</label>
+          <label>Ilość rund</label>
           <div className="rounds-btns">
-            {[3, 4, 5, 6, 7].map((r) => (
+            {[3, 4, 5, 6, 7, 8, 14].map((r) => (
               <button
                 key={r}
                 className={`round-btn ${nRounds === r ? "active" : ""}`}
