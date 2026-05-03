@@ -6,7 +6,6 @@ Fixed to provide clear tournament breakdown and best deck recommendations.
 def get_matchup_wr(deck: str, opponent: str, winrates: dict) -> float:
     if deck == opponent:
         return 0.5
-    # Pobieramy winrate z bazy, domyślnie 0.5 jeśli brak danych
     return winrates.get(deck, {}).get("vs", {}).get(opponent, {}).get("winrate", 0.5)
 
 
