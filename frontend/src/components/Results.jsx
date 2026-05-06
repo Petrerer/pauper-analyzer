@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-const API = "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function WinBar({ value, max = 1 }) {
   const pct = Math.min((value / max) * 100, 100);
@@ -81,18 +81,10 @@ export default function Results({ results, decks, onBack }) {
                     )}
                     <span>{row.deck}</span>
                   </td>
-                  <td>
-                    {(row.meta_share * 100).toFixed(2)}%
-                  </td>
-                  <td>
-                    <WinBar value={row.winrate_vs_meta} />
-                  </td>
-                  <td>
-                    <DeltaBadge delta={row.delta} />
-                  </td>
-                  <td className="undefeated-cell">
-                    {(row.p_undefeated * 100).toFixed(2)}%
-                  </td>
+                  <td>{(row.meta_share * 100).toFixed(2)}%</td>
+                  <td><WinBar value={row.winrate_vs_meta} /></td>
+                  <td><DeltaBadge delta={row.delta} /></td>
+                  <td className="undefeated-cell">{(row.p_undefeated * 100).toFixed(2)}%</td>
                 </tr>
               );
             })}
@@ -103,7 +95,7 @@ export default function Results({ results, decks, onBack }) {
       <div className="results-matchups">
         <h3>Szczegóły matchupów</h3>
         {results.potential_picks.slice(0, 30).map((row) => (
-          <MatchupCard key={row.deck} row={row} decks={decks} deckMap={deckMap} nRounds={results.n_rounds} />
+          <MatchupCard key={row.deck} row={row} deckMap={deckMap} nRounds={results.n_rounds} />
         ))}
       </div>
     </div>
@@ -111,41 +103,84 @@ export default function Results({ results, decks, onBack }) {
 }
 
 function MatchupCard({ row, deckMap, nRounds }) {
+  const [open, setOpen] = useState(false);
   const deck = deckMap[row.deck];
   const probs = row.bracket_probs || {};
+
   const records = Object.entries(probs).sort((a, b) => {
-    const [aw] = a[0].split("W");
-    const [bw] = b[0].split("W");
-    return parseInt(bw) - parseInt(aw);
+    const wA = parseInt(a[0]);
+    const wB = parseInt(b[0]);
+    return wB - wA;
   });
 
+  const maxProb = Math.max(...records.map(([, d]) => d.probability), 0.001);
+
+  const barColor = (wins) =>
+    wins > nRounds / 2 ? "#4ade80" : wins < nRounds / 2 ? "#f87171" : "#facc15";
+
+  const deltaClass =
+    row.delta >= 1.1 ? "delta-good" : row.delta < 0.9 ? "delta-bad" : "delta-neutral";
+
   return (
-    <div className="matchup-card">
-      <div className="matchup-card-header">
-        {deck?.image && <img src={`http://localhost:8000${deck.image}`} alt={row.deck} className="matchup-thumb" />}
-        <div>
-          <div className="matchup-deck-name">{row.deck}</div>
-          <div className="matchup-sub">
-            Expected WR: <strong>{(row.expected_winrate * 100).toFixed(1)}%</strong>
-            &nbsp;|&nbsp; Delta: <strong><DeltaBadge delta={row.delta} /></strong>
+    <div className={`matchup-card ${open ? "open" : ""}`}>
+      <div className="matchup-summary" onClick={() => setOpen((o) => !o)}>
+        {deck?.image && (
+          <img
+            src={`${API}${deck.image}`}
+            alt={row.deck}
+            className="matchup-thumb"
+            onError={(e) => console.error("[img FAIL]", e.currentTarget.src)}
+          />
+        )}
+        <span className="matchup-deck-name">{row.deck}</span>
+
+        <div className="matchup-stat">
+          <span className="matchup-stat-label">WR</span>
+          <span className="matchup-stat-value wr-value">
+            {(row.expected_winrate * 100).toFixed(1)}%
+          </span>
+        </div>
+
+        <div className="matchup-stat">
+          <span className="matchup-stat-label">Delta</span>
+          <span className={`matchup-stat-value ${deltaClass}`}>
+            {row.delta.toFixed(2)}×
+          </span>
+        </div>
+
+        <div className="matchup-stat">
+          <span className="matchup-stat-label">P({nRounds}-0)</span>
+          <span className="matchup-stat-value p-value">
+            {(row.p_undefeated * 100).toFixed(1)}%
+          </span>
+        </div>
+
+        <span className="matchup-chevron">{open ? "▲" : "▼"}</span>
+      </div>
+
+      {open && (
+        <div className="matchup-detail">
+          <div className="matchup-chart-title">Rozkład wyników</div>
+          <div className="matchup-bar-chart">
+            {records.map(([record, data]) => {
+              const wins = parseInt(record);
+              const heightPx = Math.max(4, (data.probability / maxProb) * 72);
+              return (
+                <div key={record} className="matchup-bar-wrap">
+                  <span className="matchup-bar-pct" style={{ color: barColor(wins) }}>
+                    {(data.probability * 100).toFixed(1)}%
+                  </span>
+                  <div
+                    className="matchup-bar"
+                    style={{ height: `${heightPx}px`, background: barColor(wins) }}
+                  />
+                  <span className="matchup-bar-record">{record}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
-      </div>
-      <div className="bracket-grid">
-        {records.map(([record, data]) => {
-          const [wStr] = record.split("W");
-          const w = parseInt(wStr);
-          const isGood = w > nRounds / 2;
-          const isBad = w < nRounds / 2;
-          return (
-            <div key={record} className={`bracket-cell ${isGood ? "good" : isBad ? "bad" : ""}`}>
-              <div className="bracket-record">{record}</div>
-              <div className="bracket-prob">{(data.probability * 100).toFixed(2)}%</div>
-              <div className="bracket-field">{(data.field_pct * 100).toFixed(1)}% of field</div>
-            </div>
-          );
-        })}
-      </div>
+      )}
     </div>
   );
 }

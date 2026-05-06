@@ -995,3 +995,19 @@ html, body, #root {
 .glossary-row:last-child { border-bottom: none; }
 .glossary-term { font-family: 'Cinzel', serif; font-size: 12px; font-weight: 600; color: var(--gold); letter-spacing: 0.04em; }
 .glossary-def { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+.matchup-summary { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; user-select: none; }
+.matchup-deck-name { flex: 1; font-weight: bold; font-size: 13px; }
+.matchup-stat { text-align: right; min-width: 60px; }
+.matchup-stat-label { display: block; font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+.matchup-stat-value { font-size: 13px; font-weight: bold; }
+.wr-value { color: #4ade80; }
+.p-value { color: #818cf8; }
+.matchup-chevron { color: #4a5080; font-size: 11px; flex-shrink: 0; }
+.matchup-detail { padding: 0 14px 14px; border-top: 1px solid #2d3148; }
+.matchup-chart-title { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: .08em; margin: 10px 0 8px; }
+.matchup-bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 96px; }
+.matchup-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.matchup-bar { width: 100%; border-radius: 3px 3px 0 0; }
+.matchup-bar-record { font-size: 9px; color: #64748b; }
+.matchup-bar-pct { font-size: 9px; font-weight: bold; }
