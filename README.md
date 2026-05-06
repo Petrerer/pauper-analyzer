@@ -2,33 +2,9 @@
 
 Aplikacja webowa do analizy meta-gry w formacie Pauper (Magic: The Gathering).
 
+## URL
 
-## Uruchomienie
-
-### 1. Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-
-python scraper.py
-
-uvicorn main:app --reload --port 8000
-```
-
-Serwer będzie dostępny pod: http://localhost:8000
-
-### 2. Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Aplikacja będzie dostępna pod: http://localhost:5173
-
-## Jak działa analiza
+https://pauper-analyzer.vercel.app/
 
 1. **Scraper** pobiera winraty między deckami z mtgdecks.net oraz obrazki dla każdego decku.
 
